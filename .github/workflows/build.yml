@@ -1,0 +1,53 @@
+name: Build PIM447 firmware
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: zmkfirmware/zmk-build-arm:stable
+    strategy:
+      fail-fast: false
+      matrix:
+        shield: [pim447_test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache west workspace
+        uses: actions/cache@v4
+        with:
+          path: |
+            modules
+            tools
+            zephyr
+            bootloader
+            zmk
+          key: zmk-${{ hashFiles('config/west.yml') }}
+          restore-keys: zmk-
+
+      - name: West init & update
+        run: |
+          west init -l config
+          west update
+          west zephyr-export
+
+      - name: Build ${{ matrix.shield }}
+        run: |
+          west build -s zmk/app -b nice_nano//zmk \
+            -d build/${{ matrix.shield }} \
+            -- -DSHIELD=${{ matrix.shield }} \
+               -DZMK_CONFIG="${GITHUB_WORKSPACE}/config"
+
+      - name: Collect UF2 artifact
+        run: |
+          mkdir -p firmware
+          cp build/${{ matrix.shield }}/zephyr/zmk.uf2 \
+             firmware/${{ matrix.shield }}.uf2
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.shield }}
+          path: firmware/${{ matrix.shield }}.uf2

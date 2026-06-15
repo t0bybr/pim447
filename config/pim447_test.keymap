@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: MIT */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/behavior_pim447.h>
+
+/ {
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            bindings = <&kp A>;
+        };
+    };
+};

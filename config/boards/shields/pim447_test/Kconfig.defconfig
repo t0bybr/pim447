@@ -1,0 +1,15 @@
+if SHIELD_PIM447_TEST
+
+config ZMK_KEYBOARD_NAME
+    default "PIM447 Test"
+
+config ZMK_MOUSE
+    default y
+
+config ZMK_PIMORONI_PIM447
+    default y
+
+config ZMK_PIM447_BEHAVIORS
+    default y
+
+endif

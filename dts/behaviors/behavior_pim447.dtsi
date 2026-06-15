@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 / {
     behaviors {
         pim447: zmk_behavior_pim447 {

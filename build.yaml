@@ -1,0 +1,6 @@
+include:
+  # CI-Testbuild für den PIM447-Treiber (HWMv2).
+  # Baut ein Test-Shield auf nice_nano//zmk, das den I2C-Node für den
+  # PIM447 instanziiert, damit Treiber und Behavior kompiliert werden.
+  - board: nice_nano//zmk
+    shield: pim447_test

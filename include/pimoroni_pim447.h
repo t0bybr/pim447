@@ -1,3 +1,5 @@
+/* SPDX-License-Identifier: MIT */
+
 #ifndef PIMORONI_PIM447_H
 #define PIMORONI_PIM447_H
 
@@ -33,12 +35,16 @@
 #define MSK_INT_TRIGGERED   0b00000001
 #define MSK_INT_OUT_EN      0b00000010
 
-/* Sleep */
+/* Control Masks */
+#define MSK_CTRL_SLEEP      0b00000001
+#define MSK_CTRL_RESET      0b00000010
 
-#define MSK_CTRL_SLEEP 0b00000001
-#define MSK_CTRL_RESET 0b00000010
+#define LED_ANIMATION_INTERVAL_MS 50
 
-#define LED_ANIMATION_INTERVAL_MS 50 // Update interval in milliseconds
+enum pim447_mode {
+    PIM447_MODE_MOUSE,
+    PIM447_MODE_SCROLL
+};
 
 struct pimoroni_pim447_config {
     struct i2c_dt_spec i2c;
@@ -48,26 +54,38 @@ struct pimoroni_pim447_config {
 struct pimoroni_pim447_data {
     const struct device *dev;
     struct gpio_callback int_gpio_cb;
-    struct k_work_delayable periodic_work;
-    struct k_work irq_work;     // Work item for handling interrupts
-    struct k_mutex data_lock;   /* Existing mutex for data synchronization */
-    struct k_mutex i2c_lock;    /* New mutex for I2C operations */
+    struct k_work irq_work;
+    struct k_mutex data_lock;
+    struct k_mutex i2c_lock;
+    enum pim447_mode mode;
     float hue;
     bool sw_pressed;
     bool sw_pressed_prev;
-    atomic_t x_buffer;
-    atomic_t y_buffer;
-    uint32_t last_interrupt_time;
-    uint32_t previous_interrupt_time;
-    int previous_x; 
+    int previous_x;
     int previous_y;
     int smoothed_x;
     int smoothed_y;
+    uint32_t last_interrupt_time;
+    uint32_t previous_interrupt_time;
 };
 
+/* Tunable parameters shared with behavior layer. Protected by pim447_settings_lock. */
+struct pim447_settings {
+    struct k_mutex lock;
+    uint8_t mouse_max_speed;
+    uint8_t mouse_max_time;
+    float mouse_smoothing_factor;
+    uint8_t scroll_max_speed;
+    uint8_t scroll_max_time;
+    float scroll_smoothing_factor;
+    float hue_increment_factor;
+};
+
+extern struct pim447_settings pim447_settings;
+
+const struct device *pim447_get_device(void);
 void pim447_enable_sleep(const struct device *dev);
 void pim447_disable_sleep(const struct device *dev);
-void pim447_toggle_mode(void);
-
+void pim447_toggle_mode(const struct device *dev);
 
 #endif /* PIMORONI_PIM447_H */

@@ -6,7 +6,13 @@ config ZMK_PIMORONI_PIM447
   select I2C
   select GPIO
   help
-    Enable driver for Pimoroni  Trackball.
+    Enable driver for Pimoroni Trackball.
+
+config ZMK_PIMORONI_PIM447_LOG_LEVEL
+  int "PIM447 log level"
+  default 3
+  help
+    Zephyr log level for the PIM447 driver. 0=NONE, 1=ERR, 2=WRN, 3=INF, 4=DBG.
 
 if ZMK_PIMORONI_PIM447
 

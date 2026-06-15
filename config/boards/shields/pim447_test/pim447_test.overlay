@@ -1,0 +1,26 @@
+/* SPDX-License-Identifier: MIT */
+/* Minimal test shield to compile the PIM447 driver in CI. */
+
+/ {
+    chosen {
+        zmk,kscan = &kscan0;
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-direct";
+        label = "KSCAN";
+        input-gpios = <&gpio0 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};
+
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+    pimoroni_pim447: pimoroni_pim447@a {
+        compatible = "zmk,pimoroni-pim447";
+        reg = <0x0a>;
+        label = "PIM447";
+        int-gpios = <&gpio0 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};

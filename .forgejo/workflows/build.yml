@@ -1,0 +1,79 @@
+# Eigenstaendiger ZMK-Build fuer Forgejo Actions (HWMv2).
+# Baut das pim447_test-Shield auf nice_nano//zmk, um den PIM447-Treiber zu testen.
+on: [push, workflow_dispatch]
+
+jobs:
+  build:
+    # "docker" = Label des self-hosted forgejo-runners.
+    runs-on: docker
+    container:
+      image: zmkfirmware/zmk-build-arm:stable
+    strategy:
+      fail-fast: false
+      matrix:
+        shield: [pim447_test]
+    steps:
+      - name: Node 20 fuer JS-Actions bereitstellen
+        run: |
+          if ! command -v node >/dev/null 2>&1; then
+            case "$(uname -m)" in
+              x86_64)        NODEARCH=x64 ;;
+              aarch64|arm64) NODEARCH=arm64 ;;
+              *) echo "Nicht unterstuetzte Arch: $(uname -m)"; exit 1 ;;
+            esac
+            NODE_VER=v20.18.1
+            URL="https://nodejs.org/dist/${NODE_VER}/node-${NODE_VER}-linux-${NODEARCH}.tar.gz"
+            if command -v curl >/dev/null 2>&1; then
+              curl -fsSL "$URL" -o /tmp/node.tar.gz
+            elif command -v wget >/dev/null 2>&1; then
+              wget -qO /tmp/node.tar.gz "$URL"
+            elif command -v python3 >/dev/null 2>&1; then
+              python3 -c "import urllib.request,sys; urllib.request.urlretrieve(sys.argv[1], sys.argv[2])" "$URL" /tmp/node.tar.gz
+            else
+              echo "Kein Downloader (curl/wget/python3) im Image gefunden"; exit 1
+            fi
+            mkdir -p /opt/node
+            tar -xzf /tmp/node.tar.gz -C /opt/node --strip-components=1
+            echo "/opt/node/bin" >> "$GITHUB_PATH"
+            /opt/node/bin/node --version
+          fi
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache west workspace
+        uses: actions/cache@v4
+        with:
+          path: |
+            modules
+            tools
+            zephyr
+            bootloader
+            zmk
+          key: zmk-${{ hashFiles('config/west.yml') }}
+          restore-keys: zmk-
+
+      - name: West init & update
+        run: |
+          west init -l config
+          west update
+          west zephyr-export
+
+      - name: Build ${{ matrix.shield }}
+        run: |
+          west build -s zmk/app -b nice_nano//zmk \
+            -d build/${{ matrix.shield }} \
+            -- -DSHIELD=${{ matrix.shield }} \
+               -DZMK_CONFIG="${GITHUB_WORKSPACE}/config"
+
+      - name: UF2 einsammeln
+        run: |
+          mkdir -p firmware
+          cp build/${{ matrix.shield }}/zephyr/zmk.uf2 \
+             firmware/${{ matrix.shield }}.uf2
+
+      - name: Artifact hochladen
+        uses: forgejo/upload-artifact@v4
+        with:
+          name: ${{ matrix.shield }}
+          path: firmware/${{ matrix.shield }}.uf2
