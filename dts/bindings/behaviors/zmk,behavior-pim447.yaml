@@ -11,8 +11,3 @@ properties:
   "#binding-cells":
     const: 1
     type: int
-
-  action:
-    type: int
-    required: false
-    description: The action to perform.

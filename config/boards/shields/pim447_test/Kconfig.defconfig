@@ -3,7 +3,7 @@ if SHIELD_PIM447_TEST
 config ZMK_KEYBOARD_NAME
     default "PIM447 Test"
 
-config ZMK_MOUSE
+config ZMK_POINTING
     default y
 
 config ZMK_PIMORONI_PIM447

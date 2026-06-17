@@ -62,11 +62,11 @@ interrupt GPIO:
 | option | default | description |
 |--------|---------|-------------|
 | `CONFIG_ZMK_PIMORONI_PIM447` | n | Enable the driver |
-| `CONFIG_ZMK_PIMORONI_PIM447_BEHAVIORS` | y (if driver on) | Enable the `&pim447` behavior |
+| `CONFIG_ZMK_PIM447_BEHAVIORS` | y (if driver on) | Enable the `&pim447` behavior |
 | `CONFIG_ZMK_PIMORONI_PIM447_AUTOMOUSE_TIMEOUT_MS` | 400 | Time the automouse layer stays active after the last movement |
 | `CONFIG_ZMK_PIMORONI_PIM447_LOG_LEVEL` | 3 | Zephyr log level for the driver |
 
-`CONFIG_ZMK_PIMORONI_PIM447` selects `ZMK_MOUSE`, `I2C` and `GPIO`.
+`CONFIG_ZMK_PIMORONI_PIM447` selects `ZMK_POINTING`, `I2C` and `GPIO`.
 
 ## Behavior bindings
 
