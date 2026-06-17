@@ -1,18 +1,51 @@
 /* SPDX-License-Identifier: MIT */
 /*
- * Standalone PIM447 trackball shield for the nice!nano v2 (and clones).
+ * Standalone PIM447 trackball shield for a SuperMini nRF52840 (built as a
+ * nice_nano//zmk target, with the I2C pinctrl overridden to this board's
+ * exposed pads).
  *
- * Wiring (nice_nano v2 pro_micro footprint):
+ * Wiring (SuperMini nRF52840 pads):
  *   PIM447 VDD -> 3V3
  *   PIM447 GND -> GND
- *   PIM447 SDA -> D3  (P0.17, board i2c0 SDA)
- *   PIM447 SCL -> D4  (P0.20, board i2c0 SCL)
- *   PIM447 INT -> D7  (P0.09)
+ *   PIM447 SDA -> D8  (P1.04)
+ *   PIM447 SCL -> D9  (P1.06)
+ *   PIM447 INT -> D7  (P0.11, active-low, internal pull-up)
  *
- * The trackball movement/click are reported through the input subsystem
- * and need no keymap binding. A minimal 1-position kscan is required by
- * ZMK; its pin (D16) is left floating with a pull-up so it never fires.
+ * The nice_nano board target hardwires i2c0 to P0.17/P0.20 via PSEL, which
+ * are not exposed on the SuperMini footprint, so we override the i2c0
+ * pinctrl here to the pads that are actually broken out.
  */
+
+&pinctrl {
+    pim447_i2c0_default: pim447_i2c0_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 4)>,
+                <NRF_PSEL(TWIM_SCL, 1, 6)>;
+        };
+    };
+
+    pim447_i2c0_sleep: pim447_i2c0_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 1, 4)>,
+                <NRF_PSEL(TWIM_SCL, 1, 6)>;
+            low-power-enable;
+        };
+    };
+};
+
+&i2c0 {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+    pinctrl-0 = <&pim447_i2c0_default>;
+    pinctrl-1 = <&pim447_i2c0_sleep>;
+    pinctrl-names = "default", "sleep";
+
+    pimoroni_pim447: pimoroni_pim447@a {
+        compatible = "zmk,pimoroni-pim447";
+        reg = <0x0a>;
+        int-gpios = <&gpio0 11 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};
 
 / {
     chosen {
@@ -21,17 +54,6 @@
 
     kscan0: kscan {
         compatible = "zmk,kscan-gpio-direct";
-        input-gpios = <&pro_micro 16 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-    };
-};
-
-&pro_micro_i2c {
-    status = "okay";
-    clock-frequency = <I2C_BITRATE_STANDARD>;
-
-    pimoroni_pim447: pimoroni_pim447@a {
-        compatible = "zmk,pimoroni-pim447";
-        reg = <0x0a>;
-        int-gpios = <&pro_micro 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        input-gpios = <&gpio0 31 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
     };
 };
