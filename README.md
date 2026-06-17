@@ -70,9 +70,11 @@ interrupt GPIO:
 
 ## Behavior bindings
 
-Include the dt-bindings header and use `&pim447 <action>`:
+Include the dt-bindings header and the behavior devicetree include, then use `&pim447 <action>`:
 
 ```dts
+#include <behaviors.dtsi>
+#include <behaviors/behavior_pim447.dtsi>
 #include <dt-bindings/behavior_pim447.h>
 
 / {
