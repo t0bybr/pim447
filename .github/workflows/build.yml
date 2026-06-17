@@ -38,7 +38,8 @@ jobs:
           west build -s zmk/app -b nice_nano//zmk \
             -d build/${{ matrix.shield }} \
             -- -DSHIELD=${{ matrix.shield }} \
-               -DZMK_CONFIG="${GITHUB_WORKSPACE}/config"
+               -DZMK_CONFIG="${GITHUB_WORKSPACE}/config" \
+               -DZMK_EXTRA_MODULES="${GITHUB_WORKSPACE}"
 
       - name: Collect UF2 artifact
         run: |
