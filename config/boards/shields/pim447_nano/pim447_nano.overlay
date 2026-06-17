@@ -53,12 +53,12 @@
  * driver reports into the input subsystem but nothing forwards it to HID,
  * so the host sees no movement even though the trackball works.
  */
-pim447_input_listener: pim447_input_listener {
-    compatible = "zmk,input-listener";
-    device = <&pimoroni_pim447>;
-};
-
 / {
+    pim447_input_listener: pim447_input_listener {
+        compatible = "zmk,input-listener";
+        device = <&pimoroni_pim447>;
+    };
+
     chosen {
         zmk,kscan = &kscan0;
     };
