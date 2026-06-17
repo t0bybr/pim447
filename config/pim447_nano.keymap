@@ -1,0 +1,34 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * Minimal keymap for the standalone PIM447 trackball.
+ *
+ * Movement and the trackball switch click are handled by the driver via
+ * the input subsystem - no binding needed. The single kscan position is
+ * bound to &none so it does nothing. Layer 1 holds behavior bindings to
+ * adjust the trackball at runtime (hold the kscan pin to ground on D16
+ * to reach it - optional).
+ */
+
+#include <behaviors.dtsi>
+#include <behaviors/behavior_pim447.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/behavior_pim447.h>
+
+/ {
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            bindings = <&none>;
+        };
+
+        adjust_layer {
+            bindings = <
+                &pim447 PIM447_TOGGLE_MODE
+                &pim447 PIM447_MOUSE_INC_MAX_SPEED
+                &pim447 PIM447_MOUSE_DEC_MAX_SPEED
+                &pim447 PIM447_INC_HUE_INCREMENT_FACTOR
+            >;
+        };
+    };
+};

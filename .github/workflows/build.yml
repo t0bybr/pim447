@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shield: [pim447_test]
+        shield: [pim447_test, pim447_nano]
     steps:
       - name: Checkout
         uses: actions/checkout@v4

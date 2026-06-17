@@ -1,0 +1,5 @@
+shield:
+  name: pim447_nano
+  requires: [pro_micro]
+  siblings:
+    - pim447_nano

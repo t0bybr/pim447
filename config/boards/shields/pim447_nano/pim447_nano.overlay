@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * Standalone PIM447 trackball shield for the nice!nano v2 (and clones).
+ *
+ * Wiring (nice_nano v2 pro_micro footprint):
+ *   PIM447 VDD -> 3V3
+ *   PIM447 GND -> GND
+ *   PIM447 SDA -> D3  (P0.17, board i2c0 SDA)
+ *   PIM447 SCL -> D4  (P0.20, board i2c0 SCL)
+ *   PIM447 INT -> D7  (P0.09)
+ *
+ * The trackball movement/click are reported through the input subsystem
+ * and need no keymap binding. A minimal 1-position kscan is required by
+ * ZMK; its pin (D16) is left floating with a pull-up so it never fires.
+ */
+
+/ {
+    chosen {
+        zmk,kscan = &kscan0;
+    };
+
+    kscan0: kscan {
+        compatible = "zmk,kscan-gpio-direct";
+        input-gpios = <&pro_micro 16 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};
+
+&pro_micro_i2c {
+    status = "okay";
+    clock-frequency = <I2C_BITRATE_STANDARD>;
+
+    pimoroni_pim447: pimoroni_pim447@a {
+        compatible = "zmk,pimoroni-pim447";
+        reg = <0x0a>;
+        int-gpios = <&pro_micro 7 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+    };
+};
