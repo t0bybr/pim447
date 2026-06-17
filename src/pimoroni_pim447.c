@@ -498,9 +498,9 @@ static int pimoroni_pim447_init(const struct device *dev)
     uint16_t chip_id = ((uint16_t)chip_id_h << 8) | chip_id_l;
     LOG_INF("PIM447 chip ID: 0x%04X", chip_id);
     if (chip_id != PIM447_CHIP_ID_EXPECTED) {
-        LOG_ERR("Unexpected chip ID 0x%04X (expected 0x%04X) - not a PIM447?",
+        LOG_WRN("Unexpected chip ID 0x%04X (expected 0x%04X) - continuing anyway; "
+                "check wiring/I2C address if the trackball is unresponsive.",
                 chip_id, PIM447_CHIP_ID_EXPECTED);
-        return -ENODEV;
     }
 
     ret = pimoroni_pim447_enable(dev);

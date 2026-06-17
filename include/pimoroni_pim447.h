@@ -41,8 +41,8 @@
 
 #define LED_ANIMATION_INTERVAL_MS 50
 
-/* Expected chip ID of the PMW3360 derivative on the PIM447. */
-#define PIM447_CHIP_ID_EXPECTED 0x0111
+/* Expected chip ID of the PIM447 trackball breakout (little-endian in regs 0xFA/0xFB). */
+#define PIM447_CHIP_ID_EXPECTED 0xBA11
 
 enum pim447_mode {
     PIM447_MODE_MOUSE,
