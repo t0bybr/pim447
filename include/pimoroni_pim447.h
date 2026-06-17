@@ -41,6 +41,9 @@
 
 #define LED_ANIMATION_INTERVAL_MS 50
 
+/* Expected chip ID of the PMW3360 derivative on the PIM447. */
+#define PIM447_CHIP_ID_EXPECTED 0x0111
+
 enum pim447_mode {
     PIM447_MODE_MOUSE,
     PIM447_MODE_SCROLL
@@ -69,9 +72,11 @@ struct pimoroni_pim447_data {
     uint32_t previous_interrupt_time;
 };
 
-/* Tunable parameters shared with behavior layer. Protected by pim447_settings_lock. */
+/*
+ * Tunable parameters shared with the behavior layer.
+ * Protected by pim447_settings_lock, which is statically initialized.
+ */
 struct pim447_settings {
-    struct k_mutex lock;
     uint8_t mouse_max_speed;
     uint8_t mouse_max_time;
     float mouse_smoothing_factor;
@@ -81,6 +86,7 @@ struct pim447_settings {
     float hue_increment_factor;
 };
 
+extern struct k_mutex pim447_settings_lock;
 extern struct pim447_settings pim447_settings;
 
 const struct device *pim447_get_device(void);

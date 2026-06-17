@@ -42,7 +42,7 @@ static int behavior_pim447_binding_pressed(struct zmk_behavior_binding *binding,
 
     uint32_t action = binding->param1;
 
-    k_mutex_lock(&pim447_settings.lock, K_FOREVER);
+    k_mutex_lock(&pim447_settings_lock, K_FOREVER);
 
     switch (action) {
     case PIM447_MOUSE_INC_MAX_SPEED:
@@ -152,13 +152,13 @@ static int behavior_pim447_binding_pressed(struct zmk_behavior_binding *binding,
         break;
     default:
         LOG_WRN("Unknown trackball adjustment action: %d", action);
-        k_mutex_unlock(&pim447_settings.lock);
+        k_mutex_unlock(&pim447_settings_lock);
         return -EINVAL;
     }
 
-    k_mutex_unlock(&pim447_settings.lock);
+    k_mutex_unlock(&pim447_settings_lock);
 
-    return 0;
+    return ZMK_BEHAVIOR_OPAQUE;
 }
 
 static int behavior_pim447_binding_released(struct zmk_behavior_binding *binding,
@@ -174,7 +174,7 @@ static const struct behavior_driver_api behavior_pim447_driver_api = {
 
 static int behavior_pim447_init(const struct device *dev)
 {
-    LOG_INF("PIM447 behavior initialized");
+    LOG_DBG("PIM447 behavior initialized");
     return 0;
 }
 

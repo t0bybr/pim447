@@ -12,12 +12,16 @@
 
 LOG_MODULE_DECLARE(zmk_pimoroni_pim447);
 
-int pimoroni_pim447_set_led(const struct device *dev, pim447_led_t led, uint8_t brightness)
+/*
+ * Internal helpers that assume the caller already holds data->i2c_lock.
+ * The public wrappers below take the lock; nested callers (e.g. sleep
+ * control, which performs several I2C ops in one transaction) use these
+ * to avoid a non-recursive deadlock on i2c_lock.
+ */
+static int set_led_unlocked(const struct pimoroni_pim447_config *config,
+                            pim447_led_t led, uint8_t brightness)
 {
-    const struct pimoroni_pim447_config *config = dev->config;
-    struct pimoroni_pim447_data *data = dev->data;
     uint8_t reg;
-    int ret;
 
     switch (led) {
     case PIM447_LED_RED:
@@ -37,10 +41,7 @@ int pimoroni_pim447_set_led(const struct device *dev, pim447_led_t led, uint8_t 
         return -EINVAL;
     }
 
-    k_mutex_lock(&data->i2c_lock, K_FOREVER);
-    ret = i2c_reg_write_byte_dt(&config->i2c, reg, brightness);
-    k_mutex_unlock(&data->i2c_lock);
-
+    int ret = i2c_reg_write_byte_dt(&config->i2c, reg, brightness);
     if (ret) {
         LOG_ERR("Failed to set LED brightness: %d", ret);
         return ret;
@@ -50,48 +51,31 @@ int pimoroni_pim447_set_led(const struct device *dev, pim447_led_t led, uint8_t 
     return 0;
 }
 
-void hsv_to_rgbw(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *w)
+int set_leds_unlocked(const struct pimoroni_pim447_config *config,
+                             uint8_t red, uint8_t green, uint8_t blue, uint8_t white)
 {
-    float c = v * s;
-    float x = c * (1.0f - fabsf(fmodf(h / 60.0f, 2.0f) - 1.0f));
-    float m = v - c;
-    float r_prime, g_prime, b_prime;
+    uint8_t led_values[4] = { red, green, blue, white };
 
-    if (h < 60.0f) {
-        r_prime = c;
-        g_prime = x;
-        b_prime = 0.0f;
-    } else if (h < 120.0f) {
-        r_prime = x;
-        g_prime = c;
-        b_prime = 0.0f;
-    } else if (h < 180.0f) {
-        r_prime = 0.0f;
-        g_prime = c;
-        b_prime = x;
-    } else if (h < 240.0f) {
-        r_prime = 0.0f;
-        g_prime = x;
-        b_prime = c;
-    } else if (h < 300.0f) {
-        r_prime = x;
-        g_prime = 0.0f;
-        b_prime = c;
-    } else {
-        r_prime = c;
-        g_prime = 0.0f;
-        b_prime = x;
+    int ret = i2c_burst_write_dt(&config->i2c, REG_LED_RED, led_values, sizeof(led_values));
+    if (ret) {
+        LOG_ERR("Failed to set LED brightness levels: %d", ret);
+        return ret;
     }
 
-    float w_prime = fminf(r_prime, fminf(g_prime, b_prime));
-    r_prime -= w_prime;
-    g_prime -= w_prime;
-    b_prime -= w_prime;
+    return 0;
+}
 
-    *r = (uint8_t)((r_prime + m + w_prime) * 255.0f);
-    *g = (uint8_t)((g_prime + m + w_prime) * 255.0f);
-    *b = (uint8_t)((b_prime + m + w_prime) * 255.0f);
-    *w = (uint8_t)(w_prime * 255.0f);
+int pimoroni_pim447_set_led(const struct device *dev, pim447_led_t led, uint8_t brightness)
+{
+    const struct pimoroni_pim447_config *config = dev->config;
+    struct pimoroni_pim447_data *data = dev->data;
+    int ret;
+
+    k_mutex_lock(&data->i2c_lock, K_FOREVER);
+    ret = set_led_unlocked(config, led, brightness);
+    k_mutex_unlock(&data->i2c_lock);
+
+    return ret;
 }
 
 int pimoroni_pim447_set_leds(const struct device *dev, uint8_t red, uint8_t green, uint8_t blue,
@@ -99,22 +83,64 @@ int pimoroni_pim447_set_leds(const struct device *dev, uint8_t red, uint8_t gree
 {
     const struct pimoroni_pim447_config *config = dev->config;
     struct pimoroni_pim447_data *data = dev->data;
-    uint8_t led_values[4];
     int ret;
 
-    led_values[0] = red;
-    led_values[1] = green;
-    led_values[2] = blue;
-    led_values[3] = white;
-
     k_mutex_lock(&data->i2c_lock, K_FOREVER);
-    ret = i2c_burst_write_dt(&config->i2c, REG_LED_RED, led_values, sizeof(led_values));
+    ret = set_leds_unlocked(config, red, green, blue, white);
     k_mutex_unlock(&data->i2c_lock);
 
-    if (ret) {
-        LOG_ERR("Failed to set LED brightness levels: %d", ret);
-        return ret;
+    return ret;
+}
+
+/*
+ * HSV to RGBW conversion.
+ *
+ * The PIM447 has a dedicated white LED. To make use of it, the white
+ * channel takes over the common (min) component of the RGB triplet, and
+ * that amount is subtracted from R/G/B so the perceived hue is preserved
+ * while the white LED carries the brightness. Without the subtraction
+ * the previous implementation lit R/G/B fully *and* added white on top,
+ * which washed out colours and doubled brightness unpredictably.
+ *
+ * Output range: 0..255 per channel.
+ */
+void hsv_to_rgbw(float h, float s, float v, uint8_t *r, uint8_t *g, uint8_t *b, uint8_t *w)
+{
+    /* Normalize hue to [0, 360). */
+    if (h < 0.0f) {
+        h = fmodf(h, 360.0f) + 360.0f;
+    } else if (h >= 360.0f) {
+        h = fmodf(h, 360.0f);
     }
 
-    return 0;
+    float c = v * s;
+    float x = c * (1.0f - fabsf(fmodf(h / 60.0f, 2.0f) - 1.0f));
+    float m = v - c;
+    float r_prime, g_prime, b_prime;
+
+    if (h < 60.0f) {
+        r_prime = c; g_prime = x; b_prime = 0.0f;
+    } else if (h < 120.0f) {
+        r_prime = x; g_prime = c; b_prime = 0.0f;
+    } else if (h < 180.0f) {
+        r_prime = 0.0f; g_prime = c; b_prime = x;
+    } else if (h < 240.0f) {
+        r_prime = 0.0f; g_prime = x; b_prime = c;
+    } else if (h < 300.0f) {
+        r_prime = x; g_prime = 0.0f; b_prime = c;
+    } else {
+        r_prime = c; g_prime = 0.0f; b_prime = x;
+    }
+
+    /* White takes the shared component; subtract it from RGB to keep hue. */
+    float w_prime = fminf(r_prime, fminf(g_prime, b_prime));
+    r_prime -= w_prime;
+    g_prime -= w_prime;
+    b_prime -= w_prime;
+
+    /* m (value offset) goes entirely to white for brightness. */
+    *r = (uint8_t)((r_prime) * 255.0f);
+    *g = (uint8_t)((g_prime) * 255.0f);
+    *b = (uint8_t)((b_prime) * 255.0f);
+    *w = (uint8_t)((w_prime + m) * 255.0f);
 }

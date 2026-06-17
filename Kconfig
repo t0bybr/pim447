@@ -1,4 +1,5 @@
-# 2024 t0bybr
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2024 t0bybr
 
 config ZMK_PIMORONI_PIM447
   bool "Pimoroni PIM447 Trackball support"
